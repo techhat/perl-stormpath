@@ -7,10 +7,9 @@ use warnings;
 use LWP::UserAgent;
 use HTTP::Headers;
 use JSON;
-use Data::Dumper;
 
 my $headers = HTTP::Headers->new();
-$headers->header('Accept' => 'application/json');
+$headers->header(Accept => 'application/json');
 
 my $ua = LWP::UserAgent->new();
 $ua->agent('Stormpath Perl Connector');
@@ -26,8 +25,8 @@ sub new {
 }
 
 sub query {
-    my ( $self, $resource, $action ) = @_;
-    die 'action does not exist in self' unless $resource;
+    my ( $self, $resource, $action, $data ) = @_;
+    die 'resource does not exist in self' unless $resource;
 
     $ua->credentials(
         'api.stormpath.com:443',
@@ -38,13 +37,24 @@ sub query {
     my $path = "https://api.stormpath.com/v1/$resource";
     $path .= "/$action" if $action;
 
-    my $response = $ua->get($path);
+    my $req = HTTP::Request->new(GET => $path);
+    if ( $data ) {
+        $req = HTTP::Request->new(POST => $path);
+        $req->content_type('application/json;charset=UTF-8');
+        $req->content(encode_json $data);
+    }
+    my $response = $ua->request($req);
     return decode_json $response->content();
 }
 
 sub accounts {
     my ( $self ) = @_;
     return $self->query('accounts', 'current');
+}
+
+sub account {
+    my ( $self, $account_id ) = @_;
+    return $self->query('accounts', $account_id);
 }
 
 sub tenants {
@@ -75,6 +85,18 @@ sub groups {
     my ( $self ) = @_;
     my $tenant_id = $self->tenant_id();
     return $self->query('tenants', "$tenant_id/groups");
+}
+
+sub update_account {
+    my ( $self, $account_id, $items ) = @_;
+
+    $self->query(
+        'accounts',
+        $account_id,
+        $items,
+    );
+
+    return $self->account($account_id);
 }
 
 1;
