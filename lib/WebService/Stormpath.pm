@@ -26,8 +26,8 @@ sub new {
 }
 
 sub query {
-    my ( $self, $action, $command ) = @_;
-    die 'action does not exist in self' unless $action;
+    my ( $self, $resource, $action ) = @_;
+    die 'action does not exist in self' unless $resource;
 
     $ua->credentials(
         'api.stormpath.com:443',
@@ -35,8 +35,8 @@ sub query {
         $self->{'apiid'},
         $self->{'apikey'},
     );
-    my $path = "https://api.stormpath.com/v1/$action";
-    $path .= "/$command" if $command;
+    my $path = "https://api.stormpath.com/v1/$resource";
+    $path .= "/$action" if $action;
 
     my $response = $ua->get($path);
     return decode_json $response->content();
