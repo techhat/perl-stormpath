@@ -39,12 +39,23 @@ sub query {
 
     my $req = HTTP::Request->new(GET => $path);
     if ( $data ) {
-        $req = HTTP::Request->new(POST => $path);
-        $req->content_type('application/json;charset=UTF-8');
-        $req->content(encode_json $data);
+        if ( $data eq ':delete:' ) {
+            $req = HTTP::Request->new(DELETE => $path);
+        }
+        else {
+            $req = HTTP::Request->new(POST => $path);
+            $req->content_type('application/json;charset=UTF-8');
+            $req->content(encode_json $data);
+        }
     }
     my $response = $ua->request($req);
-    return decode_json $response->content();
+
+    if ( $response->content() ) {
+        return decode_json $response->content();
+    }
+    else {
+        return undef;
+    }
 }
 
 sub accounts {
@@ -87,6 +98,22 @@ sub groups {
     return $self->query('tenants', "$tenant_id/groups");
 }
 
+sub create_account {
+    my ( $self, $directory_id, $info ) = @_;
+    die 'directory_id was not specified'      unless $directory_id;
+    die 'email does not exist in info'        unless $info->{'email'};
+    die 'password does not exist in info'     unless $info->{'password'};
+    die 'givenName does not exist in info'    unless $info->{'givenName'};
+    die 'surname does not exist in info'      unless $info->{'surname'};
+
+    my $response = $self->query(
+        'directories',
+        "$directory_id/accounts",
+        $info,
+    );
+    return $response;
+}
+
 sub update_account {
     my ( $self, $account_id, $items ) = @_;
 
@@ -97,6 +124,16 @@ sub update_account {
     );
 
     return $self->account($account_id);
+}
+
+sub delete_account {
+    my ( $self, $account_id ) = @_;
+
+    $self->query(
+        'accounts',
+        $account_id,
+        ':delete:',
+    );
 }
 
 1;
